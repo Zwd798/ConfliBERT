@@ -152,13 +152,13 @@ def train_multi_seed(args, train_df, eval_df, test_df, model_configs):
     for curr_seed in range(init_seed, init_seed + args.num_of_seeds):
         
         if args.task == "multilabel":
-            result = train_multilabel(args, train_df, eval_df, test_df, curr_seed, model_configs)
+            model, result = train_multilabel(args, train_df, eval_df, test_df, curr_seed, model_configs)
         if args.task == "multiclass":
-            result = train_multiclass(args, train_df, eval_df, test_df, curr_seed, model_configs)
+            model, result = train_multiclass(args, train_df, eval_df, test_df, curr_seed, model_configs)
         elif args.task == "ner":
-            result = train_ner(args, train_df, eval_df, test_df, curr_seed, model_configs)
+            model, result = train_ner(args, train_df, eval_df, test_df, curr_seed, model_configs)
         elif args.task == "binary":
-            result = train_binary(args, train_df, eval_df, test_df, curr_seed, model_configs)
+            model, result = train_binary(args, train_df, eval_df, test_df, curr_seed, model_configs)
 
         # Recording best results for a given seed
         log_filename = os.path.join("./logs/", args.dataset+"_best_results.json")
@@ -170,6 +170,8 @@ def train_multi_seed(args, train_df, eval_df, test_df, model_configs):
         
         if args.report_per_epoch:
             report_per_epoch(args, test_df, curr_seed, model_configs)
+
+    return model
 
 
 
@@ -202,7 +204,7 @@ def train_binary(args, train_df, eval_df, test_df, seed, model_configs):
     # Create a MultiLabelClassificationModel
     architecture = model_configs["architecture"]
     pretrained_model = model_configs["model_path"]
-    model = ClassificationModel(architecture, pretrained_model, args=model_args)
+    model = ClassificationModel(architecture, pretrained_model, args=model_args,use_cuda=True)
 
     # Train the model
     model.train_model(train_df, eval_df=eval_df)
@@ -223,7 +225,7 @@ def train_binary(args, train_df, eval_df, test_df, seed, model_configs):
     result["rec"] = float((result["tp"])/(result["tp"]+result["fn"]))
     result["f1"] = float(2*(result["prec"]*result["rec"])/(result["prec"]+result["rec"]))
 
-    return result
+    return model, result
 
 
 def train_multilabel(args, train_df, eval_df, test_df, seed, model_configs):
@@ -286,7 +288,7 @@ def train_multilabel(args, train_df, eval_df, test_df, seed, model_configs):
 
 
 
-    return result
+    return model, result
 
 
 
@@ -346,7 +348,7 @@ def train_multiclass(args, train_df, eval_df, test_df, seed, model_configs):
     result["f1_micro"] = metrics.f1_score(truth, predictions, average='micro')    
     result["f1_macro"] = metrics.f1_score(truth, predictions, average='macro')
 
-    return result
+    return model, result
 
 
 
@@ -397,7 +399,7 @@ def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
     # Create a NERModel
     architecture = model_configs["architecture"]
     pretrained_model = model_configs["model_path"]
-    model = NERModel(architecture, pretrained_model, args=model_args)
+    model = NERModel(architecture, pretrained_model, args=model_args, use_cuda=True)
 
     # Train the model
     model.train_model(train_df, eval_df=eval_df)
@@ -439,7 +441,7 @@ def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
     result_seqeval['rec_macro'] = float(recall_score(y_true, y_pred, average='macro'))
     result_seqeval['classification_report'] = str(classification_report(y_true, y_pred))
 
-    return result_seqeval
+    return model, result
 
 
 
@@ -695,3 +697,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
