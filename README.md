@@ -38,7 +38,7 @@ We provided multiple examples using [Simple Transformers](https://simpletransfor
 	
 	CUDA_VISIBLE_DEVICES=0 python finetune_data.py --dataset IndiaPoliceEvents_sents --report_per_epoch
 
-Click the Colab demo to see an example of evaluation: [![Google Colab Demo](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1d4557lxoDWKTx0FWcmSPlLx9UEn2BdcA?usp=sharing)
+Click the Colab demo to see an example of evaluation: [![Google Colab Demo](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1N2EQ3Lckpa2qJj1BWLYrJWAA9qTrO-9P?usp=sharing)
 
 
 ## Evaluation Datasets	
