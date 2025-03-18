@@ -25,7 +25,7 @@ def output_probabilities_on_test_set(args, test_df, model_outputs, preds):
                 t = [round(sigmoid(x),2) for x in model_outputs[i][j][0]]
                 ner_outputs.append(t)
     else:        
-        model_outputs = [[round(val, 2) for val in row] for row in model_outputs]
+        model_outputs = [[int(round(val, 2)) for val in row] for row in model_outputs]
     
 
     path = f"{args.output_dir}eval_probabilities.csv"
