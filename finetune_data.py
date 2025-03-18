@@ -14,7 +14,7 @@ import math
 def sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
-def output_probabilities_on_test_set(args, test_df, model_outputs):
+def output_probabilities_on_test_set(args, test_df, model_outputs, preds):
     ner_outputs = []
     if args.task == "binary":
         model_outputs = [[round(sigmoid(val),2) for val in row] for row in model_outputs]
@@ -29,6 +29,7 @@ def output_probabilities_on_test_set(args, test_df, model_outputs):
     
 
     path = f"{args.output_dir}eval_probabilities.csv"
+    test_df['predictions'] = list(preds)
     test_df['probabilities'] = list(model_outputs) if not ner_outputs else ner_outputs
     test_df.to_csv(path, index=False)
    
@@ -36,7 +37,7 @@ def output_probabilities_on_test_set(args, test_df, model_outputs):
 
 def report_per_epoch(args, test_df, seed, model_configs):
 
-    model_outputs_final = None
+    model_outputs_final, preds_final = None, None
     list_of_results = []
     for epoch in range(1, args.epochs_per_seed+1):
         
@@ -56,7 +57,7 @@ def report_per_epoch(args, test_df, seed, model_configs):
                 ## Performance data: Evaluating the model on test data
                 predictions, raw_outputs = model.predict(test_df.text.to_list())
                 result_test, model_outputs, wrong_predictions = model.eval_model(test_df)
-    
+
                 result = {k: float(v) for k, v in result_test.items()}
                 result["acc"] = example_based_accuracy([list(test_df.labels[i]) for i, pred in enumerate(predictions)], [list(pred) for pred in predictions])
                 result["prec"] = example_based_precision([list(test_df.labels[i]) for i, pred in enumerate(predictions)], [list(pred) for pred in predictions])
@@ -85,6 +86,7 @@ def report_per_epoch(args, test_df, seed, model_configs):
                 # Evaluating the model on test data
                 result, model_outputs, preds = model.eval_model(test_df)
                 
+                predictions = [pred_label for sentence in preds for pred_label in sentence]
                 # Computing performance metrics thru seqeval
                 y_pred = []
                 y_true = []
@@ -109,6 +111,8 @@ def report_per_epoch(args, test_df, seed, model_configs):
 
                 # Evaluating the model on test data
                 result_np, model_outputs, wrong_predictions = model.eval_model(test_df)
+                
+                predictions = [False if row[0] > row[1] else True for row in model_outputs]
 
                 # Collecting relevant results
                 result = {}
@@ -155,6 +159,7 @@ def report_per_epoch(args, test_df, seed, model_configs):
 
             list_of_results.append(result)
             model_outputs_final = model_outputs
+            preds_final = predictions
 
 
     results_df = pd.DataFrame.from_dict(list_of_results, orient='columns')
@@ -166,7 +171,7 @@ def report_per_epoch(args, test_df, seed, model_configs):
         results_df.to_csv(outfile_report, mode='a', header=True, index=False)
 
     
-    output_probabilities_on_test_set(args, test_df, model_outputs_final)
+    output_probabilities_on_test_set(args, test_df, model_outputs_final, preds_final)
 
 
 
