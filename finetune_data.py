@@ -9,11 +9,34 @@ import numpy as np
 import csv
 import os
 import json
+import math
 
+def sigmoid(x):
+    return 1 / (1 + math.exp(-x))
+
+def output_probabilities_on_test_set(args, test_df, model_outputs):
+    ner_outputs = []
+    if args.task == "binary":
+        model_outputs = [[round(sigmoid(val),2) for val in row] for row in model_outputs]
+    
+    elif args.task == "ner":
+        for i in range(len(model_outputs)): #200
+            for j in range(len(model_outputs[i])): #46
+                t = [round(sigmoid(x),2) for x in model_outputs[i][j][0]]
+                ner_outputs.append(t)
+    else:        
+        model_outputs = [[round(val, 2) for val in row] for row in model_outputs]
+    
+
+    path = f"{args.output_dir}eval_probabilities.csv"
+    test_df['probabilities'] = list(model_outputs) if not ner_outputs else ner_outputs
+    test_df.to_csv(path, index=False)
+   
 
 
 def report_per_epoch(args, test_df, seed, model_configs):
 
+    model_outputs_final = None
     list_of_results = []
     for epoch in range(1, args.epochs_per_seed+1):
         
@@ -61,7 +84,7 @@ def report_per_epoch(args, test_df, seed, model_configs):
 
                 # Evaluating the model on test data
                 result, model_outputs, preds = model.eval_model(test_df)
-
+                
                 # Computing performance metrics thru seqeval
                 y_pred = []
                 y_true = []
@@ -131,6 +154,7 @@ def report_per_epoch(args, test_df, seed, model_configs):
             result["epoch"] = epoch
 
             list_of_results.append(result)
+            model_outputs_final = model_outputs
 
 
     results_df = pd.DataFrame.from_dict(list_of_results, orient='columns')
@@ -141,13 +165,14 @@ def report_per_epoch(args, test_df, seed, model_configs):
     else:
         results_df.to_csv(outfile_report, mode='a', header=True, index=False)
 
+    
+    output_probabilities_on_test_set(args, test_df, model_outputs_final)
 
 
 
 
 
 def train_multi_seed(args, train_df, eval_df, test_df, model_configs):
-
     init_seed = args.initial_seed
     for curr_seed in range(init_seed, init_seed + args.num_of_seeds):
         
@@ -349,21 +374,6 @@ def train_multiclass(args, train_df, eval_df, test_df, seed, model_configs):
     return result
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
 
 
@@ -440,13 +450,6 @@ def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
     result_seqeval['classification_report'] = str(classification_report(y_true, y_pred))
 
     return result_seqeval
-
-
-
-
-
-
-
 
 
 
@@ -597,7 +600,7 @@ def loadData(args):
 
         train_data = []
         seq = 0
-        with open(os.path.join(args.data_dir, "train.txt")) as f:
+        with open(os.path.join(args.data_dir, "train.txt"), encoding='utf-8') as f:
             lines = f.readlines()
             for line in lines:
                 if len(line) == 1:
@@ -610,7 +613,7 @@ def loadData(args):
 
         dev_data = []
         seq = 0
-        with open(os.path.join(args.data_dir, "dev.txt")) as f:
+        with open(os.path.join(args.data_dir, "dev.txt"), encoding='utf-8') as f:
             lines = f.readlines()
             for line in lines:
                 if len(line) == 1:
@@ -622,7 +625,7 @@ def loadData(args):
 
         test_data = []
         seq = 0
-        with open(os.path.join(args.data_dir, "test.txt")) as f:
+        with open(os.path.join(args.data_dir, "test.txt"), encoding='utf-8') as f:
             lines = f.readlines()
             for line in lines:
                 if len(line) == 1:
@@ -652,11 +655,11 @@ def main():
 
     ## Main parameters
     parser.add_argument("--dataset",
-                        default = "insightCrime",
+                        default = "re3d",
                         type=str,
                         help="The input dataset.")
     parser.add_argument("--report_per_epoch",
-                        default = False,
+                        default = True,
                         action='store_true',
                         help="If true, will output the report per epoch.")
 
