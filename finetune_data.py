@@ -16,7 +16,6 @@ def sigmoid(x):
 
 def output_probabilities_on_test_set(args, model_name, test_df, model_outputs, preds):
     ner_outputs = []
-    
     if args.task == "binary":
         model_outputs = [[round(sigmoid(val),2) for val in row] for row in model_outputs]
     
@@ -26,21 +25,22 @@ def output_probabilities_on_test_set(args, model_name, test_df, model_outputs, p
                 t = [round(sigmoid(x),2) for x in model_outputs[i][j][0]]
                 ner_outputs.append(t)
     else:        
-        model_outputs = [[int(round(val, 2)) for val in row] for row in model_outputs]
+        model_outputs = [[round(val, 2) for val in row] for row in model_outputs]
     
-    test_df['model name'] = model_name
-    test_df['dataset'] = args.dataset
-    path = f"{args.output_dir}eval_probabilities.csv"
+
+    path = f"{args.output_dir}{model_name}_eval_probabilities.csv"
+
+    if args.dataset=="insightCrime":
+        test_df['labels_txt'] = [['Drug Trafficking', 'Corruption', 'Law Enforcement', 'Homicides', 'Kidnapping', 'Eco-Trafficking', 'Criminal Migration']] * len(test_df)
+    elif args.dataset.startswith("IndiaPolice"):
+        test_df['labels_txt'] = [['Kill', 'Arrest', 'Fail to act', 'Force', 'Any Action']] * len(test_df)
+    elif args.dataset.startswith("satp_relevant"):
+        test_df['labels_txt'] = [['Armed Assault', 'Bombing/Explosion', 'Kidnapping', 'Others', 'Not terrorism']] * len(test_df)
+        
+   
     test_df['predictions'] = list(preds)
     test_df['probabilities'] = list(model_outputs) if not ner_outputs else ner_outputs
-
-    cols = ['model name', 'dataset'] + [col for col in test_df.columns if col not in ['model name', 'dataset']]
-    test_df = test_df[cols]
-    
-    if os.path.exists(path):
-        test_df.to_csv(path, mode='a', index=False, header=False)
-    else:
-        test_df.to_csv(path, index=False, header=True)
+    test_df.to_csv(path, index=False)
    
 
 
@@ -669,7 +669,7 @@ def main():
 
     ## Main parameters
     parser.add_argument("--dataset",
-                        default = "re3d",
+                        default = "IndiaPoliceEvents_docs",
                         type=str,
                         help="The input dataset.")
     parser.add_argument("--report_per_epoch",
